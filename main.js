@@ -1,6 +1,11 @@
 //jshint esversion:8
 const pcsclite = require("pcsclite");
 const pcsc = pcsclite();
+const http = require("http");
+var fs = require('fs');
+var qs = require('querystring');
+const { app, BrowserWindow } = require('electron');
+
 
 
 console.log("Hello World!");
@@ -52,6 +57,48 @@ pcsc.on("reader", function (reader) {
                           let daya = data.toString();
                           console.log("Data received", daya);
                           
+                          var options = {
+                            'method': 'POST',
+                            'hostname': 'localhost',
+                            'port': 3000,
+                            'path': '/',
+                            'headers': {
+                              'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            'maxRedirects': 20
+                          };
+
+                          var req = http.request(options, function (res) {
+                            var chunks = [];
+
+                            res.on("data", function (chunk) {
+                              chunks.push(chunk);
+                            });
+
+                            res.on("end", function (chunk) {
+                              var body = Buffer.concat(chunks);
+                              console.log(body.toString());
+                            });
+
+                            res.on("error", function (error) {
+                              console.error(error);
+                            });
+                          });
+
+                          var postData = qs.stringify({
+                            'data': daya
+                          });
+
+                          req.write(postData);
+
+                          req.end();
+
+
+
+
+
+
+                          
                           
 
                         }
@@ -74,4 +121,31 @@ pcsc.on("reader", function (reader) {
 
 pcsc.on("error", function (err) {
   console.log("PCSC error", err.message);
+});
+
+
+const createWindow = () => {
+  const win = new BrowserWindow({
+    width: 800,
+    height: 600,
+  });
+
+  win.loadFile('index.html');
+}
+
+app.whenReady().then(() => {
+  createWindow()
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
